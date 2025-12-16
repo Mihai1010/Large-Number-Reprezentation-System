@@ -1,5 +1,5 @@
 from pymtl3 import *
-from src.bigint_modules import BigIntAdder
+from ..PyMTL.chunk import BigIntALU
 
 
 def test_bigint_add_2_chunks():
