@@ -1,5 +1,9 @@
 from pymtl3 import *
-from ..PyMTL.chunk import BigIntALU
+import sys
+from pathlib import Path
+sys.path.append(str(Path(__file__).parent.parent))
+from PyMTL.bigint_adder import BigIntAdder
+from PyMTL.chunk_adder import ChunkAdder
 
 
 def test_bigint_add_2_chunks():

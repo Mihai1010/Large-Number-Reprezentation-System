@@ -1,6 +1,6 @@
 from pymtl3 import *
-from chunk_adder import ChunkAdder
-from config import CHUNK_WIDTH
+from PyMTL.chunk_adder import ChunkAdder
+from PyMTL.config import CHUNK_WIDTH
 
 class BigIntAdder( Component ):
     def construct( s, num_chunks=4, width=CHUNK_WIDTH ):

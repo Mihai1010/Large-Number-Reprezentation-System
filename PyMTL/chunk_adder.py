@@ -1,5 +1,5 @@
 from pymtl3 import *
-from config import CHUNK_WIDTH
+from PyMTL.config import CHUNK_WIDTH
 
 class ChunkAdder( Component ):
     def construct( s, width=CHUNK_WIDTH ):
