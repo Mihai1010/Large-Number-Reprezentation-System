@@ -1,0 +1,1 @@
+CHUNK_WIDTH = 32
