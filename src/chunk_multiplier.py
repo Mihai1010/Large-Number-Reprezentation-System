@@ -8,4 +8,4 @@ class ChunkMultiplier(Component):
 
         @update
         def comb_logic():
-            s.out @= s.in0 * s.in1
+            s.out @= zext(s.in0, 64) * zext(s.in1, 64)
