@@ -1,165 +1,40 @@
 # Large-Number-Reprezentation-System
 
-## 1. Introducere
+1. Filosofia Proiectului: "Divide et Impera"
+Computerele moderne sunt limitate de dimensiunea registrelor hardware (de obicei 32 sau 64 de biți). Când vrem să calculăm valori astronomice sau chei criptografice, aceste registre devin neîncăpătoare.Soluția adoptată în acest proiect este segmentarea (chunking):Nu privim un număr ca pe o singură entitate, ci ca pe un lanț de segmente de câte 32 de biți.Fiecare segment este tratat ca o cifră într-o bază mult mai mare ($2^{32}$).Logica de calcul este transpusă de la nivel elementar (biți) la nivel de blocuri (chunks).
 
-Aritmetica cu precizie arbitrară reprezintă o componentă esențială în domenii
-precum criptografia, simulările numerice de înaltă precizie și calculul științific.
-Operațiile pe numere foarte mari (peste 64 de biți) nu pot fi realizate eficient
-folosind doar instrucțiunile standard ale procesorului, motiv pentru care sunt
-necesare arhitecturi hardware dedicate.
+2. Strategia Hardware (Modelare PyMTL3)
+În design-ul de hardware, am construit ierarhia de jos în sus, imitând modul în care un procesor modular este asamblat într-un mediu real (FPGA/ASIC).
 
-Acest proiect propune implementarea operațiilor aritmetice fundamentale
-(adunare, scădere și înmulțire) pentru numere mari, utilizând PyMTL – un
-Hardware Construction Language bazat pe Python – pentru a simula comportamentul
-unui accelerator FPGA, fără a necesita hardware fizic.
+A. Elementele de Bază (Atomii)
+În loc să construim un sistem monolitic, am creat unități mici și specializate: ChunkAdder și ChunkMultiplier. Acestea sunt „muncitorii” care execută operația doar pe „felia” lor de date, fără să vadă imaginea de ansamblu.
 
----
+B. Scalabilitatea prin Agregare (BigIntALU)
+Pentru a obține rezultatul final, am implementat o structură ierarhică unde componentele comunică între ele:
 
-## 2. Obiectivul proiectului
+Adunarea: Se face prin alinierea segmentelor. Fiecare segment își primește datele și calculează suma locală.
 
-Scopul proiectului este de a demonstra:
-- cum pot fi implementate operații aritmetice cu precizie mare folosind o
-  arhitectură hardware modulară;
-- cum se pot verifica aceste operații prin testbench-uri dedicate;
-- separarea clară dintre implementare hardware și verificare.
+Înmulțirea: Folosește o abordare de tip "produs cartezian". Fiecare segment din primul număr este înmulțit cu fiecare segment din al doilea număr, iar rezultatele sunt redistribuite în funcție de ponderea lor pozițională.
 
-Proiectul este realizat exclusiv prin simulare și se concentrează pe corectitudine
-funcțională, nu pe optimizare de performanță.
+3. Validarea Design-ului (Strategia de Testare)
+Hardware-ul nu permite erori de logică fără costuri mari. Prin urmare, am implementat o suită de teste unitare care simulează comportamentul fizic:
 
----
+Simularea Ciclului de Viață: Testele nu verifică doar o funcție, ci „elaborează” circuitul, îi aplică un grup de reguli de simulare și îi dau un semnal de „reset”, exact ca la pornirea unui procesor real.
 
-## 3. Cerința proiectului (formulată clar)
+Verificarea prin Hexadecimal: Folosim reprezentarea HEX pentru a vizualiza clar cum se comportă fiecare „chunk” de 32 de biți în interiorul unui număr mare.
 
-Se cere implementarea următoarelor componente:
+Integritatea Datelor: Testele confirmă că atunci când adunăm două structuri complexe de segmente, rezultatul se păstrează corect aliniat, asigurând că logica de „leagătură” dintre componentele hardware funcționează.
 
-### 3.1 Operații de bază pe chunk
-- Adunare pe un chunk cu semnal de carry
-- Scădere pe un chunk cu semnal de borrow
-- Înmulțire pe un chunk
+4. Strategia Software și Paralelizarea (CUDA/GPU)
+Când mutăm problema pe GPU, filosofia se schimbă de la "ierarhie de componente" la "paralelism masiv".
 
-Un *chunk* reprezintă o porțiune fixă a unui număr mare (de exemplu 32 biți).
+Conceptul de "Little Endian" în Memorie
+Pentru a facilita calculele, numerele sunt stocate cu segmentul cel mai puțin semnificativ la început (index 0). Aceasta este o decizie strategică: ne permite să propagăm transportul (carry) de la stânga la dreapta într-un mod natural pentru procesarea digitală.
 
-### 3.2 Operații pe numere mari
-- Reprezentarea numerelor mari ca vectori de chunk-uri
-- Implementarea adunării pe mai mulți chunk-uri
-- Implementarea înmulțirii pe mai mulți chunk-uri folosind metoda schoolbook
+JIT Compilation (Just-In-Time)
+Folosind Numba, codul Python este tradus direct în instrucțiuni mașină pentru placa video (PTX). Aceasta oferă un echilibru între flexibilitatea scrierii codului în Python și viteza brută a unui procesor NVIDIA.
 
-Carry-ul și borrow-ul trebuie propagate corect între chunk-uri.
+5. Provocări Tehnice Rezolvate
+Puntea Software-Hardware: Am creat un sistem de „packing/unpacking” (conversie chunks <-> întregi). Acesta funcționează ca un translator între lumea flexibilă a Python-ului (care poate gestiona orice număr) și lumea rigidă a hardware-ului (unde totul trebuie să aibă o dimensiune fixă de biți).
 
-### 3.3 Verificare
-- Crearea de testbench-uri pentru fiecare modul
-- Testarea corectitudinii pentru:
-  - cazuri normale
-  - cazuri limită (overflow, valori maxime, zero)
-- Compararea rezultatelor cu o implementare software de referință (Python)
-
----
-
-## 4. Tehnologii utilizate
-
-- **Python 3.10+**
-- **PyMTL3** – Hardware Construction Language
-- **pytest** – framework pentru testare automată
-
-Nu este utilizat hardware FPGA real.
-
----
-
-## 5. Structura proiectului
-
-.
-├── src/
-│ └── bigint_modules.py
-│ # Implementarea modulelor PyMTL:
-│ # - ChunkAdder
-│ # - ChunkSubtractor
-│ # - ChunkMultiplier
-│ # - BigIntAdder
-│ # - BigIntMultiplier
-│
-├── testbench/
-│ ├── test_chunk_adder.py
-│ ├── test_chunk_subtractor.py
-│ ├── test_chunk_multiplier.py
-│ ├── test_bigint_add.py
-│ └── test_bigint_mul.py
-│
-├── requirements.txt
-└── README.md
-
-yaml
-Copy code
-
----
-
-## 6. Descrierea implementării
-
-### 6.1 Reprezentarea numerelor mari
-Numerele mari sunt reprezentate ca liste de chunk-uri de dimensiune fixă.
-Fiecare chunk este procesat de un modul hardware dedicat.
-
-### 6.2 Module PyMTL
-- **ChunkAdder** – adună două chunk-uri și un carry de intrare
-- **ChunkSubtractor** – scade două chunk-uri cu borrow
-- **ChunkMultiplier** – realizează produsul a două chunk-uri
-- **BigIntAdder** – realizează adunarea pe mai mulți chunk-uri
-- **BigIntMultiplier** – realizează înmulțirea schoolbook
-
-Fiecare modul este descris folosind semantică hardware (semnale, actualizări
-sincrone).
-
----
-
-## 7. Verificare și testare
-
-Pentru fiecare modul există un testbench dedicat care:
-- instanțiază modulul PyMTL;
-- aplică vectori de test;
-- compară rezultatul cu o referință software Python.
-
-Testele sunt complet automate și pot fi rulate folosind `pytest`.
-
----
-
-## 8. Instalare
-
-```bash
-pip install pymtl3 pytest
-9. Rulare teste
-bash
-Copy code
-pytest testbench/
-Toate testele trebuie să fie marcate ca PASSED pentru ca implementarea să
-fie considerată corectă.
-
-10. Ce demonstrează acest proiect
-Utilizarea unui Hardware Construction Language (PyMTL)
-
-Implementarea logicii hardware pentru aritmetică cu precizie mare
-
-Propagarea corectă a carry-ului și borrow-ului
-
-Separarea implementării de verificare (design vs. testbench)
-
-Structurarea unui proiect HDL/HCL într-un repository GitHub
-
-11. Limitări
-Nu este utilizat un FPGA real
-
-Nu sunt implementați algoritmi avansați (Karatsuba, FFT)
-
-Accentul este pus pe corectitudine, nu pe performanță
-
-12. Posibile extensii
-Implementarea multiplicării Karatsuba
-
-Suport pentru aritmetică modulară (Montgomery)
-
-Generarea de cod HDL (Verilog) din PyMTL
-
-Analiză de performanță și resurse
-
-13. Concluzie
-Acest proiect oferă o implementare clară, modulară și verificată a aritmeticii
-cu precizie arbitrară folosind PyMTL. Structura și documentația sunt concepute
-pentru a respecta cerințele academice ale fazei de implementare HDL/HCL
+Gestiunea Overflow-ului: Am prevăzut arhitectura astfel încât rezultatele intermediare ale înmulțirii să aibă spațiu dublu (64 de biți), prevenind pierderea de informație înainte de agregarea finală.
